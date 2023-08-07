@@ -1,6 +1,7 @@
 package template
 
 import de.fabmax.kool.KoolContext
+import de.fabmax.kool.input.KeyboardInput
 import de.fabmax.kool.math.Mat4f
 import de.fabmax.kool.math.Vec3f
 import de.fabmax.kool.modules.ksl.KslPbrShader
@@ -10,11 +11,9 @@ import de.fabmax.kool.physics.geometry.BoxGeometry
 import de.fabmax.kool.physics.geometry.SphereGeometry
 import de.fabmax.kool.scene.Scene
 import de.fabmax.kool.scene.colorMesh
-import de.fabmax.kool.scene.defaultOrbitCamera
 import de.fabmax.kool.scene.scene
 import de.fabmax.kool.util.*
-import pongTutorial.PongPaddle1
-import pongTutorial.PongPaddle2
+import pongTutorial.PongPaddle
 import kotlin.random.Random
 import kotlin.random.nextInt
 
@@ -31,8 +30,8 @@ lateinit var ball: RigidDynamic
 //sizes for the walls delimiting the game area
 var wallDimension = 100f
 //the pong paddles that the players will control
-lateinit var paddle1: PongPaddle1
-lateinit var paddle2: PongPaddle2
+lateinit var paddle1: PongPaddle
+lateinit var paddle2: PongPaddle
 
 //font size (for the ui)
 var fontSize = 45f
@@ -123,7 +122,28 @@ fun pong(ktx: KoolContext) {
                 }
             }
         }
+        //creating another panel for the instructions (note that I wasn't a great UI designer in libgdx
+        // either so don't expect much 😅)
+        Panel(colors = Colors.singleColorDark(MdColor.LIME)) {
+            val font = MsdfFont(
+                sizePts = fontSize/2.5f,
+                glowColor = colors.primary.withAlpha(0.5f)
+            )
+            modifier
+                .size(400.dp, 200.dp)
+                .align(AlignmentX.End, AlignmentY.Bottom)
+                .margin(top = 40.dp)
+                .backgroundColor(Color.DARK_BLUE)
 
+            Text("Use the up and down/left and right arrow keys \n" +
+                    "to move the paddles"){
+                modifier.alignX(AlignmentX.Center)
+                modifier.textAlign(AlignmentX.Center, AlignmentY.Center)
+                modifier.font(font)
+                modifier.paddingTop=40.dp
+                modifier.textColor(MdColor.LIGHT_GREEN)
+            }
+        }
     }
 }
 
@@ -135,7 +155,6 @@ fun Scene.loadPhysicsWorld() {
         simStepper = stepper
         //for this game we want the gravity to be set to 0
         gravity = Vec3f.ZERO
-
     }
 }
 
@@ -167,7 +186,7 @@ fun Scene.loadPaddles() {
             transform.set(paddleBody.transform)
         }
     }
-    paddle1 = PongPaddle1(paddleBody, paddleMesh)
+    paddle1 = PongPaddle(paddleBody, paddleMesh, KeyboardInput.KEY_CURSOR_UP, KeyboardInput.KEY_CURSOR_DOWN)
     //same thing for the second paddle
     val paddle2Body= RigidDynamic(isKinematic = true).apply {
         attachShape(Shape(paddleGeom, material))
@@ -185,7 +204,7 @@ fun Scene.loadPaddles() {
             transform.set(paddle2Body.transform)
         }
     }
-    paddle2= PongPaddle2(paddle2Body, paddle2Mesh)
+    paddle2= PongPaddle(paddle2Body, paddle2Mesh, KeyboardInput.KEY_CURSOR_LEFT, KeyboardInput.KEY_CURSOR_RIGHT)
     //we add the two paddle's physic actors to the world, so that they will
     //be updated every frame
     world.addActor(paddleBody)
@@ -201,6 +220,7 @@ fun Scene.loadWalls() {
         attachShape(Shape(wallBottomGeom, wallMaterial))
         position = Vec3f(0f, -50f, 0f)
         world.addActor(this)
+        tags.put("object", "wall")
     }
 
 
@@ -210,6 +230,7 @@ fun Scene.loadWalls() {
         attachShape(Shape(wallLeftGeom, wallMaterial))
         position = Vec3f(-50f, 0f, 0f)
         world.addActor(this)
+        tags.put("object", "wall")
     }
     //creating the top wall
     val wallTopGeom = BoxGeometry(Vec3f(wallDimension, 10f, 10f))
@@ -217,6 +238,7 @@ fun Scene.loadWalls() {
         attachShape(Shape(wallTopGeom, wallMaterial))
         position = Vec3f(0f, 50f, 0f)
         world.addActor(this)
+        tags.put("object", "wall")
     }
     //creating the right wall
     val wallRightGeom = BoxGeometry(Vec3f(10f, wallDimension, 10f))
@@ -224,6 +246,7 @@ fun Scene.loadWalls() {
         attachShape(Shape(wallRightGeom, wallMaterial))
         position = Vec3f(50f, 0f, 0f)
         world.addActor(this)
+        tags.put("object", "wall")
     }
 
     //generating the meshes for the walls
@@ -360,6 +383,15 @@ fun resetBallPosition() {
     //reset the ball to be at the center of the game area
     ball.linearVelocity = Vec3f(0f, 0f, 0f)
     ball.position = Vec3f(0f, 0f, 0f)
+    //also reset the paddles' position to their initial one
+    paddle1.apply {
+        body.position= Vec3f(-40f, 0f, 0f)
+        speed=0f
+    }
+    paddle2.apply {
+        body.position= Vec3f(40f, 0f, 0f)
+        speed=0f
+    }
 }
 
 
